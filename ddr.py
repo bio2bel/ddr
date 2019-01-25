@@ -3,12 +3,15 @@
 """Download, convert, and summarize disease-disease relationships with BEL graph."""
 
 import os
+import sys
 from urllib.request import urlretrieve
 from zipfile import ZipFile
 
+import click
 import pandas as pd
 from pybel import BELGraph
 from pybel.dsl import Pathology
+from tqdm import tqdm
 
 data_url = 'http://science.sciencemag.org/highwire/filestream/628238/field_highwire_adjunct_files/1/Datasets_S1-S4.zip'
 path = os.path.join(os.path.expanduser('~'), 'Desktop', 'data.zip')
@@ -38,11 +41,21 @@ def extract_data() -> pd.DataFrame:
             return pd.read_csv(file, sep="\t", skiprows=33, names=columns)
 
 
-def make_graph(df: pd.DataFrame) -> BELGraph:
+def make_graph():
     """Convert the data to a BEL graph."""
-    graph = BELGraph()
+    if not os.path.exists(path):
+        download_data()
+    df = extract_data()
+    return _make_graph(df)
 
-    for _, (disease_a, disease_b) in df[['disease_A', 'disease_B']].iterrows():
+
+def _make_graph(df: pd.DataFrame) -> BELGraph:
+    graph = BELGraph(
+        name="disease-disease relationships",
+        version="1.0.0",
+    )
+
+    for _, (disease_a, disease_b) in tqdm(df[['disease_A', 'disease_B']].iterrows(), total=len(df.index)):
         if not disease_a or not disease_b:
             continue
         graph.add_association(
@@ -55,13 +68,14 @@ def make_graph(df: pd.DataFrame) -> BELGraph:
     return graph
 
 
-def main():
+@click.command()
+@click.option("-o", "--file", type=click.File("w"), default=sys.stdout, help="file to output")
+@click.option("--format",default = "nodelink")
+def main(file, format):
     """Download, convert, and summarize disease-disease relationships with BEL graph."""
-    if not os.path.exists(path):
-        download_data()
-    df = extract_data()
-    graph = make_graph(df)
+    graph = make_graph()
     graph.summarize()
+    graph.serialize(format, file)
 
 
 if __name__ == '__main__':
