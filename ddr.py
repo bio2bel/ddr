@@ -38,7 +38,6 @@ def extract_data() -> pd.DataFrame:
     """Load the data."""
     with ZipFile(path) as myzip:
         with myzip.open('data/DataS4_disease_pairs.tsv') as file:
-            #print(pd.read_csv(file, sep="\t", skiprows=33, nrows=50, names=columns))
             return pd.read_csv(file, sep="\t", skiprows=33, names=columns)
 
 
@@ -55,10 +54,15 @@ def _make_graph(df: pd.DataFrame) -> BELGraph:
         name="disease-disease relationships",
         version="1.0.0",
     )
-    # The only cited cut off point in the literature was
-    for _, (disease_a, disease_b, s_AB) in tqdm(df[['disease_A', 'disease_B', 's_AB (observed)']].iterrows(),
-                                                total=len(df.index)):
-        if not disease_a or not disease_b or s_AB > 0:
+    '''
+    From lit: In summary, we conclude that the proposed separation measure sAB offers a robust quantification
+    of the network-based relationship between diseases. As expected, we find that most disease pairs
+    are clearly separated (sAB > 0), however, we also identified a considerable number of disease pairs
+    with statistically significant overlap (sAB < 0).
+    '''
+    for _, (disease_a, disease_b, netwrk_sep) in tqdm(df[['disease_A', 'disease_B', 's_AB (observed)']].iterrows(),
+                                                      total=len(df.index)):
+        if not disease_a or not disease_b or netwrk_sep > 0:
             continue
         graph.add_association(
             Pathology("MeSH", disease_a),
