@@ -49,7 +49,7 @@ def make_graph():
     return _make_graph(df)
 
 
-def _make_graph(df: pd.DataFrame) -> BELGraph:
+def _make_graph(df: pd.DataFrame, use_tqdm: bool = True) -> BELGraph:
     graph = BELGraph(
         name="disease-disease relationships",
         version="1.0.0",
@@ -60,8 +60,10 @@ def _make_graph(df: pd.DataFrame) -> BELGraph:
     are clearly separated (sAB > 0), however, we also identified a considerable number of disease pairs
     with statistically significant overlap (sAB < 0).
     '''
-    for _, (disease_a, disease_b, netwrk_sep) in tqdm(df[['disease_A', 'disease_B', 's_AB (observed)']].iterrows(),
-                                                      total=len(df.index)):
+    it = df[['disease_A', 'disease_B', 's_AB (observed)']].iterrows()
+    if use_tqdm:
+        it = tqdm(it, total=len(df.index))
+    for _, (disease_a, disease_b, netwrk_sep) in it:
         if not disease_a or not disease_b or netwrk_sep > 0:
             continue
         graph.add_association(
